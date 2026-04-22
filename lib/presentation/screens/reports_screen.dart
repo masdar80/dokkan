@@ -338,7 +338,16 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                         return ListTile(
                           title: Text(item['name']),
                           subtitle: Text('الكمية: ${item['quantity']}'),
-                          trailing: Text('${item['profit_usd'].toStringAsFixed(2)} \$'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('${item['profit_usd'].toStringAsFixed(2)} \$'),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                onPressed: () => _showDeleteTransactionDialog(context, item, true),
+                              ),
+                            ],
+                          ),
                         );
                       } else {
                         // تفاصيل الشهر/السنة: مجاميع فرعية

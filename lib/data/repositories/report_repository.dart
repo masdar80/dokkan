@@ -8,7 +8,7 @@ class ReportRepository {
   Future<List<Map<String, dynamic>>> getSalesBetween(DateTime from, DateTime to) async {
     final db = await _dbHelper.database;
     return await db.rawQuery('''
-      SELECT s.sale_date, p.name, p.code, si.quantity, si.sell_price_syp, si.profit_usd 
+      SELECT s.id as sale_id, s.sale_date, p.name, p.code, si.quantity, si.sell_price_syp, si.profit_usd 
       FROM sales s
       JOIN sale_items si ON s.id = si.sale_id
       JOIN products p ON si.product_id = p.id
@@ -21,7 +21,7 @@ class ReportRepository {
   Future<List<Map<String, dynamic>>> getPurchasesBetween(DateTime from, DateTime to) async {
     final db = await _dbHelper.database;
     return await db.rawQuery('''
-      SELECT b.purchase_date, p.name, p.code, b.initial_quantity, b.purchase_price_syp, b.cost_usd, b.exchange_rate
+      SELECT b.id, b.purchase_date, p.name, p.code, b.initial_quantity, b.purchase_price_syp, b.cost_usd, b.exchange_rate
       FROM batches b
       JOIN products p ON b.product_id = p.id
       WHERE b.purchase_date BETWEEN ? AND ?
@@ -55,7 +55,7 @@ class ReportRepository {
   Future<List<Map<String, dynamic>>> getDaySalesDetails(String date) async {
     final db = await _dbHelper.database;
     return await db.rawQuery('''
-      SELECT s.sale_date, p.name, si.quantity, si.sell_price_syp, si.profit_usd
+      SELECT s.id as sale_id, s.sale_date, p.name, si.quantity, si.sell_price_syp, si.profit_usd
       FROM sales s
       JOIN sale_items si ON s.id = si.sale_id
       JOIN products p ON si.product_id = p.id
