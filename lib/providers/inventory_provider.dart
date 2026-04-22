@@ -70,12 +70,12 @@ class InventoryProvider with ChangeNotifier {
     await loadProducts();
   }
 
-  Future<bool> deleteProduct(int id) async {
-    final success = await _productRepo.deleteProduct(id);
-    if (success) {
+  Future<int> deleteProduct(int id) async {
+    final result = await _productRepo.deleteProduct(id);
+    if (result > 0) {
       await loadProducts();
     }
-    return success;
+    return result;
   }
 
   Future<void> search(String query) async {

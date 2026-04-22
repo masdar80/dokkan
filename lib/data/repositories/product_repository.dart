@@ -26,23 +26,27 @@ class ProductRepository {
     );
   }
 
-  Future<bool> deleteProduct(int id) async {
+  Future<int> deleteProduct(int id) async {
     final db = await _dbHelper.database;
     
-    // فحص الارتباطات
-    final batches = await db.query('batches', where: 'product_id = ?', whereArgs: [id]);
+    // 1. فحص إذا كانت هناك مبيعات مرتبطة بالمادة
     final sales = await db.query('sale_items', where: 'product_id = ?', whereArgs: [id]);
-    
-    if (batches.isNotEmpty || sales.isNotEmpty) {
-      return false; // فشل الحذف بسبب وجود قيود
+    if (sales.isNotEmpty) {
+      return -1; // رمز خطأ: مبيعات موجودة
     }
 
-    await db.delete(
+    // 2. فحص إذا كانت هناك دفعات مشتريات (حتى لو كانت فارغة)
+    final batches = await db.query('batches', where: 'product_id = ?', whereArgs: [id]);
+    if (batches.isNotEmpty) {
+      return -2; // رمز خطأ: مشتريات موجودة
+    }
+
+    // 3. إذا كان السجل نظيفاً تماماً، احذف المادة
+    return await db.delete(
       'products',
       where: 'id = ?',
       whereArgs: [id],
     );
-    return true;
   }
 
   Future<List<Product>> searchProducts(String query) async {
