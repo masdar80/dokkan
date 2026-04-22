@@ -88,7 +88,7 @@ class DatabaseHelper {
         cost_usd_at_sale REAL NOT NULL,
         profit_usd REAL NOT NULL,
         FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE,
-        FOREIGN KEY (product_id) REFERENCES products (id)
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
       )
     ''');
 
@@ -116,7 +116,7 @@ class DatabaseHelper {
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 3) {
+    if (oldVersion < 4) {
       // تحديث بسيط للتطوير: حذف الجداول وإعادة إنشائها (لضمان سلامة الهيكل الجديد)
       // في التطبيقات الإنتاجية نستخدم ALTER TABLE
       await db.execute('DROP TABLE IF EXISTS sale_batch_links');

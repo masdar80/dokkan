@@ -168,17 +168,13 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               final result = await context.read<InventoryProvider>().deleteProduct(product.id!);
               if (mounted) {
                 Navigator.pop(context);
-                if (result == -1) {
+                if (result > 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تعذر الحذف: المادة مرتبطة بمبيعات قديمة. يرجى حذف المبيعات أولاً من التقارير.')),
+                    const SnackBar(content: Text('تم حذف المادة بنجاح')),
                   );
-                } else if (result == -2) {
+                } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تعذر الحذف: المادة مرتبطة بمشتريات قديمة. يرجى حذف فواتير الشراء أولاً.')),
-                  );
-                } else if (result <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تعذر الحذف: توجد حركات مرتبطة بهذه المادة')),
+                    const SnackBar(content: Text('تعذر الحذف: قد تكون المادة مرتبطة بمبيعات نشطة')),
                   );
                 }
               }
