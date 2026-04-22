@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:dokkan/data/datasources/database_helper.dart';
 import 'package:dokkan/data/models/product_model.dart';
 import 'package:dokkan/data/models/category_model.dart';
@@ -26,17 +27,15 @@ class DataService {
       final file = File(path);
 
       if (!await file.exists()) return false;
+      final bytes = await file.readAsBytes();
 
       String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: 'حفظ النسخة الاحتياطية',
         fileName: 'dokkan_backup_${DateTime.now().millisecondsSinceEpoch}.db',
+        bytes: bytes,
       );
 
-      if (outputFile != null) {
-        await file.copy(outputFile);
-        return true;
-      }
-      return false;
+      return outputFile != null;
     } catch (e) {
       print('Backup error: $e');
       return false;
@@ -77,18 +76,15 @@ class DataService {
       };
 
       String jsonString = jsonEncode(data);
+      final bytes = Uint8List.fromList(utf8.encode(jsonString));
       
       String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: 'تصدير المواد',
         fileName: 'dokkan_items.json',
+        bytes: bytes,
       );
 
-      if (outputFile != null) {
-        final file = File(outputFile);
-        await file.writeAsString(jsonString);
-        return true;
-      }
-      return false;
+      return outputFile != null;
     } catch (e) {
       print('JSON Export error: $e');
       return false;
