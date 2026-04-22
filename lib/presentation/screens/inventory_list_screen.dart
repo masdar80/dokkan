@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/presentation/screens/add_product_screen.dart';
 import 'package:dokkan/presentation/screens/category_management_screen.dart';
+import 'package:dokkan/data/models/category_model.dart';
 
 class InventoryListScreen extends StatefulWidget {
   const InventoryListScreen({super.key});
@@ -123,34 +124,72 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     final nameController = TextEditingController(text: product.name);
     final codeController = TextEditingController(text: product.code);
     final priceController = TextEditingController(text: product.defaultSellPriceSyp.toString());
+    final inventoryProvider = context.read<InventoryProvider>();
+    final formKey = GlobalKey<FormState>();
+    
+    // العثور على التصنيف الحالي
+    Category? selectedCategory = inventoryProvider.categories.cast<Category?>().firstWhere(
+      (c) => c?.id == product.categoryId,
+      orElse: () => null,
+    );
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تعديل مادة'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم المادة')),
-            TextField(controller: codeController, decoration: const InputDecoration(labelText: 'رمز المادة')),
-            TextField(controller: priceController, decoration: const InputDecoration(labelText: 'سعر البيع الافتراضي'), keyboardType: TextInputType.number),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('تعديل مادة'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController, 
+                    decoration: const InputDecoration(labelText: 'اسم المادة'),
+                    validator: (v) => (v == null || v.isEmpty) ? 'مطلوب' : null,
+                  ),
+                  TextFormField(controller: codeController, decoration: const InputDecoration(labelText: 'رمز المادة')),
+                  
+                  DropdownButtonFormField<Category>(
+                    value: selectedCategory,
+                    decoration: const InputDecoration(labelText: 'التصنيف'),
+                    items: inventoryProvider.categories.map((c) {
+                      return DropdownMenuItem(value: c, child: Text(c.name));
+                    }).toList(),
+                    onChanged: (v) => setDialogState(() => selectedCategory = v),
+                    validator: (v) => v == null ? 'يرجى اختيار تصنيف' : null,
+                  ),
+
+                  TextFormField(
+                    controller: priceController, 
+                    decoration: const InputDecoration(labelText: 'سعر البيع الافتراضي'), 
+                    keyboardType: TextInputType.number,
+                    validator: (v) => (v == null || v.isEmpty) ? 'مطلوب' : null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  final updated = product.copyWith(
+                    name: nameController.text,
+                    code: codeController.text,
+                    categoryId: selectedCategory?.id,
+                    defaultSellPriceSyp: double.parse(priceController.text),
+                  );
+                  context.read<InventoryProvider>().updateProduct(updated);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('تحديث'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          ElevatedButton(
-            onPressed: () {
-              final updated = product.copyWith(
-                name: nameController.text,
-                code: codeController.text,
-                defaultSellPriceSyp: double.parse(priceController.text),
-              );
-              context.read<InventoryProvider>().updateProduct(updated);
-              Navigator.pop(context);
-            },
-            child: const Text('تحديث'),
-          ),
-        ],
       ),
     );
   }

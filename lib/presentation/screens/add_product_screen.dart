@@ -68,6 +68,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       return DropdownMenuItem(value: c, child: Text(c.name));
                     }).toList(),
                     onChanged: (value) => setState(() => _selectedCategory = value),
+                    validator: (value) {
+                      if (value == null) return 'يرجى اختيار تصنيف';
+                      return null;
+                    },
                   );
                 },
               ),
