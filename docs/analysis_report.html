@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحليل نظام دكان - Dokkan Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 3rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        header p {
+            margin-top: 1rem;
+            opacity: 0.9;
+            font-size: 1.2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: -2rem auto 3rem;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin-top: 1.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-item {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-right: 4px solid var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            text-align: right;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f8fafc;
+            color: var(--primary);
+        }
+
+        .mermaid {
+            background: #ffffff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8rem; }
+            .container { margin-top: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>تحليل وثائق نظام "دكان"</h1>
+    <p>التوثيق الفني والتحليلي المتكامل لتطبيق إدارة المبيعات والمخزون</p>
+</header>
+
+<div class="container">
+    <!-- Functional Requirements -->
+    <div class="card">
+        <h2>📋 المتطلبات الوظيفية</h2>
+        <div class="grid">
+            <div class="feature-item">
+                <h3>📦 المخزون</h3>
+                <p>إدارة المواد بنظام الدفعات (Batches) لضمان دقة حساب التكلفة عند تغير الأسعار.</p>
+            </div>
+            <div class="feature-item">
+                <h3>💱 سعر الصرف</h3>
+                <p>جلب تلقائي من موقع <a href="https://sp-today.com/en/currency/us-dollar" target="_blank">SP-Today</a> (قيمة Sell) مع نظام موافقة يدوية.</p>
+            </div>
+            <div class="feature-item">
+                <h3>🛒 المبيعات والمشتريات</h3>
+                <p>استخدام السعر المخزن تلقائياً في كافة العمليات لتسريع الإدخال وضمان الوحدة المالية.</p>
+            </div>
+            <div class="feature-item">
+                <h3>📊 التقارير</h3>
+                <p>تقارير شاملة (يومية/شهرية) تتضمن صافي الربح وجرد القيمة الحالية للمحل.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Non-Functional Requirements -->
+    <div class="card">
+        <h2>⚙️ المتطلبات غير الوظيفية</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>المعيار</th>
+                    <th>الوصف</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>سهولة الاستخدام</td>
+                    <td>واجهة سريعة، زر تحديث سعر الصرف بجانب السعر دائماً.</td>
+                </tr>
+                <tr>
+                    <td>التوفر</td>
+                    <td>العمل بدون إنترنت؛ في حال فشل جلب السعر يتم التحول للإدخال اليدوي.</td>
+                </tr>
+                <tr>
+                    <td>الموثوقية</td>
+                    <td>لا يتم اعتماد أي سعر صرف مجلوب بدون موافقة صريحة من المستخدم.</td>
+                </tr>
+                <tr>
+                    <td>الأمان</td>
+                    <td>نظام نسخ احتياطي يدوي وتلقائي لحماية البيانات.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Use Cases -->
+    <div class="card">
+        <h2>🎭 حالات الاستخدام (Use Cases)</h2>
+        <div class="mermaid">
+            graph TD
+                Owner((صاحب الدكان))
+                Owner --> UC1[إدارة المواد]
+                Owner --> UC2[تسجيل مبيعات]
+                Owner --> UC3[تسجيل مشتريات]
+                Owner --> UC4[عرض التقارير]
+                Owner --> UC5[إدارة الشركاء]
+                Owner --> UC6[تحديث سعر الصرف]
+        </div>
+    </div>
+
+    <!-- Flowcharts -->
+    <div class="card">
+        <h2>🔄 مخطط مزامنة سعر الصرف</h2>
+        <div class="mermaid">
+            graph TD
+                A[فتح التطبيق / تحديث] --> B{جلب تلقائي؟}
+                B -- نجاح --> C[عرض السعر للموافقة]
+                B -- فشل --> D[إدخال يدوي من المستخدم]
+                C -- تعديل/رفض --> D
+                C -- موافقة --> E[حفظ واعتماده للعمليات]
+                D --> E
+                E --> F[عرض دائم في الواجهة]
+        </div>
+    </div>
+
+    <!-- Database Schema -->
+    <div class="card">
+        <h2>🗄️ هيكلية قاعدة البيانات (DB Schema)</h2>
+        <div class="mermaid">
+            erDiagram
+                PRODUCTS ||--o{ BATCHES : "contains"
+                PRODUCTS ||--o{ SALE_ITEMS : "sold_in"
+                SALES ||--o{ SALE_ITEMS : "contains"
+                
+                PRODUCTS {
+                    int id
+                    string name
+                    double current_qty
+                }
+                BATCHES {
+                    int id
+                    double cost_usd
+                    double remaining_qty
+                }
+                SALES {
+                    int id
+                    double exchange_rate
+                    double total_usd
+                }
+        </div>
+        <div class="grid">
+            <div class="feature-item">
+                <h3>📦 نظام Batches</h3>
+                <p>تطبيق نظام FIFO بدقة عبر تتبع الكميات المتبقية في كل دفعة شراء.</p>
+            </div>
+            <div class="feature-item">
+                <h3>📊 دقة الأرباح</h3>
+                <p>يتم تثبيت تكلفة كل قطعة مبيعة بالدولار لحظة البيع لضمان تقارير أرباح صحيحة.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Architecture -->
+    <div class="card">
+        <h2>🏗️ هيكلية التطبيق (Architecture)</h2>
+        <div class="grid">
+            <div class="feature-item">
+                <h3>📂 Clean Architecture</h3>
+                <p>فصل البيانات عن الواجهات عبر طبقة Providers لإدارة الحالة.</p>
+            </div>
+            <div class="feature-item">
+                <h3>🛠️ Tech Stack</h3>
+                <p>Flutter + Provider + SQLite + Web Scraping.</p>
+            </div>
+        </div>
+        <pre style="background: #f1f5f9; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-family: monospace; text-align: left; direction: ltr; margin-top: 1rem;">
+lib/
+├── data/       # SQLite & Scraping
+├── domain/     # Logic & Models
+├── providers/  # State Management
+└── presentation/ # UI Screens
+        </pre>
+    </div>
+</div>
+
+<div class="footer">
+    تم إنتاج هذا التوثيق بواسطة Antigravity AI - &copy; 2026
+</div>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+
+</body>
+</html>
