@@ -29,8 +29,19 @@ class ProductRepository {
   Future<int> deleteProduct(int id) async {
     final db = await _dbHelper.database;
     
-    // سنسمح بحذف المادة مباشرة، وقاعدة البيانات ستتكفل بحذف الدفعات المرتبطة (Cascade)
-    // ملاحظة: الحذف سيفشل فقط إذا كان هناك قيود تقنية لم نقم بفكها
+    // 1. فحص حركات المبيع
+    final sales = await db.query('sale_items', where: 'product_id = ?', whereArgs: [id]);
+    if (sales.isNotEmpty) {
+      return -1; // رمز: يوجد مبيعات
+    }
+
+    // 2. فحص حركات الشراء (الدفعات)
+    final batches = await db.query('batches', where: 'product_id = ?', whereArgs: [id]);
+    if (batches.isNotEmpty) {
+      return -2; // رمز: يوجد مشتريات
+    }
+
+    // 3. إذا كان السجل نظيفاً تماماً، اسمح بالحذف
     return await db.delete(
       'products',
       where: 'id = ?',
