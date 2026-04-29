@@ -1,6 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:dokkan/core/constants/app_strings.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -17,6 +20,19 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
+    if (kIsWeb) {
+      // إعداد المصنع للويب
+      databaseFactory = databaseFactoryFfiWeb;
+      final path = filePath; // في الويب، المسار هو مجرد اسم الملف
+      
+      return await openDatabase(
+        path,
+        version: AppStrings.dbVersion,
+        onCreate: _createDB,
+        onUpgrade: _onUpgrade,
+      );
+    }
+
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
