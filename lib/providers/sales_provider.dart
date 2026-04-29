@@ -12,6 +12,9 @@ class SalesProvider with ChangeNotifier {
     required double quantity,
     required double sellPriceSyp,
     required double currentExchangeRate,
+    int? customerId,
+    String saleType = 'cash',
+    String saleCurrency = 'SYP',
   }) async {
     _isProcessing = true;
     notifyListeners();
@@ -22,6 +25,9 @@ class SalesProvider with ChangeNotifier {
         quantity: quantity,
         sellPriceSyp: sellPriceSyp,
         currentExchangeRate: currentExchangeRate,
+        customerId: customerId,
+        saleType: saleType,
+        saleCurrency: saleCurrency,
       );
     } finally {
       _isProcessing = false;

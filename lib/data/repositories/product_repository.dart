@@ -53,10 +53,33 @@ class ProductRepository {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'products',
-      where: 'name LIKE ? OR code LIKE ?',
-      whereArgs: ['%$query%', '%$query%'],
+      where: 'name LIKE ? OR code LIKE ? OR barcode LIKE ?',
+      whereArgs: ['%$query%', '%$query%', '%$query%'],
     );
     return List.generate(maps.length, (i) => Product.fromMap(maps[i]));
+  }
+
+  Future<Product?> getProductByBarcode(String barcode) async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'products',
+      where: 'barcode = ?',
+      whereArgs: [barcode],
+    );
+    if (maps.isNotEmpty) {
+      return Product.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<bool> checkBarcodeExists(String barcode, {int? excludeId}) async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'products',
+      where: excludeId != null ? 'barcode = ? AND id != ?' : 'barcode = ?',
+      whereArgs: excludeId != null ? [barcode, excludeId] : [barcode],
+    );
+    return maps.isNotEmpty;
   }
 
   Future<Product?> getProductByCode(String code) async {

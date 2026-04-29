@@ -37,11 +37,22 @@ class DatabaseHelper {
       )
     ''');
 
+    // جدول الزبائن
+    await db.execute('''
+      CREATE TABLE customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        phone TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
     // جدول المواد
     await db.execute('''
       CREATE TABLE products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT UNIQUE NOT NULL,
+        barcode TEXT UNIQUE,
         name TEXT UNIQUE NOT NULL,
         category_id INTEGER,
         current_quantity REAL DEFAULT 0,
@@ -51,7 +62,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // جدول الدفعات
+    // جدول الدفعات (المشتريات)
     await db.execute('''
       CREATE TABLE batches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,10 +81,14 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER,
         sale_date TEXT NOT NULL,
         total_amount_syp REAL NOT NULL,
         total_amount_usd REAL NOT NULL,
-        exchange_rate REAL NOT NULL
+        exchange_rate REAL NOT NULL,
+        sale_type TEXT DEFAULT 'cash',
+        sale_currency TEXT DEFAULT 'SYP',
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL
       )
     ''');
 
@@ -89,6 +104,21 @@ class DatabaseHelper {
         profit_usd REAL NOT NULL,
         FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+      )
+    ''');
+
+    // جدول دفعات الزبائن
+    await db.execute('''
+      CREATE TABLE customer_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        amount_usd REAL NOT NULL,
+        amount_syp REAL NOT NULL,
+        exchange_rate REAL NOT NULL,
+        payment_currency TEXT NOT NULL,
+        payment_date TEXT NOT NULL,
+        notes TEXT,
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
       )
     ''');
 
@@ -117,8 +147,6 @@ class DatabaseHelper {
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 4) {
-      // تحديث بسيط للتطوير: حذف الجداول وإعادة إنشائها (لضمان سلامة الهيكل الجديد)
-      // في التطبيقات الإنتاجية نستخدم ALTER TABLE
       await db.execute('DROP TABLE IF EXISTS sale_batch_links');
       await db.execute('DROP TABLE IF EXISTS sale_items');
       await db.execute('DROP TABLE IF EXISTS sales');
@@ -127,6 +155,40 @@ class DatabaseHelper {
       await db.execute('DROP TABLE IF EXISTS categories');
       await db.execute('DROP TABLE IF EXISTS partners');
       await _createDB(db, newVersion);
+    } else if (oldVersion == 4) {
+      // الترقية للإصدار 5 مع الحفاظ على البيانات
+      // 1. إضافة جدول الزبائن
+      await db.execute('''
+        CREATE TABLE customers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          phone TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      // 2. إضافة جدول دفعات الزبائن
+      await db.execute('''
+        CREATE TABLE customer_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          amount_usd REAL NOT NULL,
+          amount_syp REAL NOT NULL,
+          exchange_rate REAL NOT NULL,
+          payment_currency TEXT NOT NULL,
+          payment_date TEXT NOT NULL,
+          notes TEXT,
+          FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+        )
+      ''');
+
+      // 3. إضافة أعمدة لجدول المواد
+      await db.execute('ALTER TABLE products ADD COLUMN barcode TEXT UNIQUE');
+
+      // 4. إضافة أعمدة لجدول المبيعات
+      await db.execute('ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL');
+      await db.execute('ALTER TABLE sales ADD COLUMN sale_type TEXT DEFAULT "cash"');
+      await db.execute('ALTER TABLE sales ADD COLUMN sale_currency TEXT DEFAULT "SYP"');
     }
   }
 

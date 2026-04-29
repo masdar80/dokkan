@@ -1,6 +1,7 @@
 class Product {
   final int? id;
   final String code;
+  final String? barcode;
   final String name;
   final int? categoryId;
   final double currentQuantity;
@@ -10,6 +11,7 @@ class Product {
   Product({
     this.id,
     required this.code,
+    this.barcode,
     required this.name,
     this.categoryId,
     this.currentQuantity = 0,
@@ -21,6 +23,7 @@ class Product {
     return {
       'id': id,
       'code': code,
+      'barcode': barcode,
       'name': name,
       'category_id': categoryId,
       'current_quantity': currentQuantity,
@@ -33,6 +36,7 @@ class Product {
     return Product(
       id: map['id'],
       code: map['code'] ?? '',
+      barcode: map['barcode'],
       name: map['name'],
       categoryId: map['category_id'],
       currentQuantity: map['current_quantity'],
@@ -44,6 +48,7 @@ class Product {
   Product copyWith({
     int? id,
     String? code,
+    String? barcode,
     String? name,
     int? categoryId,
     double? currentQuantity,
@@ -53,6 +58,7 @@ class Product {
     return Product(
       id: id ?? this.id,
       code: code ?? this.code,
+      barcode: barcode ?? this.barcode,
       name: name ?? this.name,
       categoryId: categoryId ?? this.categoryId,
       currentQuantity: currentQuantity ?? this.currentQuantity,

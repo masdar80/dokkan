@@ -49,6 +49,7 @@ class InventoryProvider with ChangeNotifier {
   Future<void> addProduct({
     required String name,
     String? code,
+    String? barcode,
     int? categoryId,
     required double defaultPrice,
   }) async {
@@ -56,6 +57,7 @@ class InventoryProvider with ChangeNotifier {
     
     final product = Product(
       code: finalCode,
+      barcode: barcode,
       name: name,
       categoryId: categoryId,
       defaultSellPriceSyp: defaultPrice,
@@ -63,6 +65,14 @@ class InventoryProvider with ChangeNotifier {
     );
     await _productRepo.insertProduct(product);
     await loadProducts();
+  }
+
+  Future<bool> isBarcodeExists(String barcode, {int? excludeId}) async {
+    return await _productRepo.checkBarcodeExists(barcode, excludeId: excludeId);
+  }
+
+  Future<Product?> getProductByBarcode(String barcode) async {
+    return await _productRepo.getProductByBarcode(barcode);
   }
 
   Future<void> updateProduct(Product product) async {

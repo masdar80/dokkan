@@ -5,6 +5,7 @@ import 'package:dokkan/core/theme/app_theme.dart';
 import 'package:dokkan/providers/exchange_rate_provider.dart';
 import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/providers/sales_provider.dart';
+import 'package:dokkan/providers/customer_provider.dart';
 import 'package:dokkan/presentation/screens/home_screen.dart';
 
 void main() async {
@@ -16,6 +17,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ExchangeRateProvider()),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => SalesProvider()),
+        ChangeNotifierProvider(create: (_) => CustomerProvider()),
       ],
       child: const DokkanApp(),
     ),

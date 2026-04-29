@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dokkan/core/utils/data_service.dart';
 import 'package:provider/provider.dart';
 import 'package:dokkan/providers/inventory_provider.dart';
+import 'package:dokkan/presentation/screens/customers_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -29,6 +30,18 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.people),
+            title: const Text('الزبائن والذمم المالية'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CustomersScreen()),
+              );
+            },
+          ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.storage),
             title: const Text('نسخة احتياطية كاملة'),

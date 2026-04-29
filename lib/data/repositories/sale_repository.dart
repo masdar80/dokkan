@@ -10,6 +10,9 @@ class SaleRepository {
     required double quantity,
     required double sellPriceSyp,
     required double currentExchangeRate,
+    int? customerId,
+    String saleType = 'cash',
+    String saleCurrency = 'SYP',
   }) async {
     final db = await _dbHelper.database;
     
@@ -57,10 +60,13 @@ class SaleRepository {
       double profitUsd = totalAmountUsd - totalCostUsdAtSale;
 
       int saleId = await txn.insert('sales', {
+        'customer_id': customerId,
         'sale_date': DateTime.now().toIso8601String(),
         'total_amount_syp': totalAmountSyp,
         'total_amount_usd': totalAmountUsd,
         'exchange_rate': currentExchangeRate,
+        'sale_type': saleType,
+        'sale_currency': saleCurrency,
       });
 
       // 3. تسجيل تفاصيل المادة المبيعة

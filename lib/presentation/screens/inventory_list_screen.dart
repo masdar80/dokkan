@@ -4,6 +4,7 @@ import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/presentation/screens/add_product_screen.dart';
 import 'package:dokkan/presentation/screens/category_management_screen.dart';
 import 'package:dokkan/data/models/category_model.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
 class InventoryListScreen extends StatefulWidget {
   const InventoryListScreen({super.key});
@@ -123,11 +124,11 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   void _showEditProductDialog(BuildContext context, dynamic product) {
     final nameController = TextEditingController(text: product.name);
     final codeController = TextEditingController(text: product.code);
+    final barcodeController = TextEditingController(text: product.barcode);
     final priceController = TextEditingController(text: product.defaultSellPriceSyp.toString());
     final inventoryProvider = context.read<InventoryProvider>();
     final formKey = GlobalKey<FormState>();
     
-    // العثور على التصنيف الحالي
     Category? selectedCategory = inventoryProvider.categories.cast<Category?>().firstWhere(
       (c) => c?.id == product.categoryId,
       orElse: () => null,
@@ -148,6 +149,23 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                     controller: nameController, 
                     decoration: const InputDecoration(labelText: 'اسم المادة'),
                     validator: (v) => (v == null || v.isEmpty) ? 'مطلوب' : null,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: barcodeController, 
+                          decoration: const InputDecoration(labelText: 'الباركود'),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.camera_alt),
+                        onPressed: () async {
+                          String res = await FlutterBarcodeScanner.scanBarcode('#ff6666', 'إلغاء', true, ScanMode.BARCODE);
+                          if (res != '-1') setDialogState(() => barcodeController.text = res);
+                        },
+                      ),
+                    ],
                   ),
                   TextFormField(controller: codeController, decoration: const InputDecoration(labelText: 'رمز المادة')),
                   
@@ -174,15 +192,29 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (formKey.currentState!.validate()) {
+                  // التحقق من تكرار الباركود
+                  if (barcodeController.text.isNotEmpty) {
+                    bool exists = await inventoryProvider.isBarcodeExists(barcodeController.text, excludeId: product.id);
+                    if (exists) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('هذا الباركود مستخدم مسبقاً!'), backgroundColor: Colors.red),
+                        );
+                      }
+                      return;
+                    }
+                  }
+
                   final updated = product.copyWith(
                     name: nameController.text,
                     code: codeController.text,
+                    barcode: barcodeController.text.isEmpty ? null : barcodeController.text,
                     categoryId: selectedCategory?.id,
                     defaultSellPriceSyp: double.parse(priceController.text),
                   );
-                  context.read<InventoryProvider>().updateProduct(updated);
+                  inventoryProvider.updateProduct(updated);
                   Navigator.pop(context);
                 }
               },
