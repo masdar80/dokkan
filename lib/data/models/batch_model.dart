@@ -1,6 +1,7 @@
 class Batch {
   final int? id;
   final int productId;
+  final int? purchaseId;
   final double initialQuantity;
   final double remainingQuantity;
   final double purchasePriceSyp;
@@ -11,6 +12,7 @@ class Batch {
   Batch({
     this.id,
     required this.productId,
+    this.purchaseId,
     required this.initialQuantity,
     required this.remainingQuantity,
     required this.purchasePriceSyp,
@@ -23,6 +25,7 @@ class Batch {
     return {
       'id': id,
       'product_id': productId,
+      'purchase_id': purchaseId,
       'initial_quantity': initialQuantity,
       'remaining_quantity': remainingQuantity,
       'purchase_price_syp': purchasePriceSyp,
@@ -36,6 +39,7 @@ class Batch {
     return Batch(
       id: map['id'],
       productId: map['product_id'],
+      purchaseId: map['purchase_id'],
       initialQuantity: map['initial_quantity'],
       remainingQuantity: map['remaining_quantity'],
       purchasePriceSyp: map['purchase_price_syp'],

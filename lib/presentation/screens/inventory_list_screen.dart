@@ -4,7 +4,7 @@ import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/presentation/screens/add_product_screen.dart';
 import 'package:dokkan/presentation/screens/category_management_screen.dart';
 import 'package:dokkan/data/models/category_model.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:dokkan/presentation/screens/barcode_scanner_screen.dart';
 
 class InventoryListScreen extends StatefulWidget {
   const InventoryListScreen({super.key});
@@ -52,62 +52,64 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
           ),
         ),
       ),
-      body: Consumer<InventoryProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (provider.products.isEmpty) {
-            return const Center(child: Text('لا توجد مواد في المخزون'));
-          }
-
-          return ListView.builder(
-            itemCount: provider.products.length,
-            padding: const EdgeInsets.all(16),
-            itemBuilder: (context, index) {
-              final product = provider.products[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text(
-                    product.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('الرمز: ${product.code}'),
-                      Text('الكمية: ${product.currentQuantity}'),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${product.defaultSellPriceSyp} ل.س',
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Consumer<InventoryProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            if (provider.products.isEmpty) {
+              return const Center(child: Text('لا توجد مواد في المخزون'));
+            }
+  
+            return ListView.builder(
+              itemCount: provider.products.length,
+              padding: const EdgeInsets.all(16),
+              itemBuilder: (context, index) {
+                final product = provider.products[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    title: Text(
+                      product.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('الرمز: ${product.code}'),
+                        Text('الكمية: ${product.currentQuantity}'),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${product.defaultSellPriceSyp} ل.س',
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 20),
-                        onPressed: () => _showEditProductDialog(context, product),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                        onPressed: () => _showDeleteProductDialog(context, product),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          onPressed: () => _showEditProductDialog(context, product),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                          onPressed: () => _showDeleteProductDialog(context, product),
+                        ),
+                      ],
+                    ),
+                    onTap: () {},
                   ),
-                  onTap: () {},
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -161,8 +163,11 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                       IconButton(
                         icon: const Icon(Icons.camera_alt),
                         onPressed: () async {
-                          String res = await FlutterBarcodeScanner.scanBarcode('#ff6666', 'إلغاء', true, ScanMode.BARCODE);
-                          if (res != '-1') setDialogState(() => barcodeController.text = res);
+                          final String? res = await Navigator.push<String>(
+                            context,
+                            MaterialPageRoute(builder: (_) => const BarcodeScannerScreen()),
+                          );
+                          if (res != null) setDialogState(() => barcodeController.text = res);
                         },
                       ),
                     ],

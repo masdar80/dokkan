@@ -16,30 +16,55 @@ class ProductSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Autocomplete<Product>(
-      displayStringForOption: (Product p) => '${p.name} (${p.code})',
+      displayStringForOption: (Product p) => p.name,
       optionsBuilder: (TextEditingValue textEditingValue) {
         if (textEditingValue.text == '') {
           return const Iterable<Product>.empty();
         }
         final provider = context.read<InventoryProvider>();
+        final query = textEditingValue.text.toLowerCase();
         return provider.products.where((Product p) {
-          return p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
-                 p.code.toLowerCase().contains(textEditingValue.text.toLowerCase());
+          return p.name.toLowerCase().contains(query) ||
+                 p.code.toLowerCase().contains(query) ||
+                 (p.barcode != null && p.barcode!.contains(query));
         });
       },
       onSelected: onSelected,
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-        // إذا كانت هناك مادة مختارة مسبقاً، نحدث حقل النص
-        if (selectedProduct != null && controller.text.isEmpty) {
-          controller.text = '${selectedProduct!.name} (${selectedProduct!.code})';
+        // تحديث النص إذا تم اختيار مادة خارجياً (عن طريق الباركود مثلاً)
+        if (selectedProduct != null && controller.text != selectedProduct!.name && !focusNode.hasFocus) {
+          Future.microtask(() => controller.text = selectedProduct!.name);
         }
-        
+
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: 'البحث عن مادة (بالاسم أو الرمز)',
-            prefixIcon: Icon(Icons.search),
+          onFieldSubmitted: (value) {
+            final provider = context.read<InventoryProvider>();
+            final match = provider.products.where((p) => 
+              p.barcode == value || p.code == value
+            ).firstOrNull;
+            
+            if (match != null) {
+              onSelected(match);
+              // لا نحتاج لمسح الحقل هنا إذا أردنا بقاء الاسم
+            } else {
+              onFieldSubmitted();
+            }
+          },
+          decoration: InputDecoration(
+            labelText: 'البحث عن مادة (بالاسم، الرمز، أو الباركود)',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: controller.text.isNotEmpty 
+              ? IconButton(
+                  icon: const Icon(Icons.clear), 
+                  onPressed: () {
+                    controller.clear();
+                    // هنا نحتاج لإبلاغ الأب بمسح الاختيار، لكن بما أن onSelected لا تدعم null،
+                    // قد نحتاج لحل آخر أو نكتفي بمسح النص.
+                  }) 
+              : null,
+            helperText: 'اضغط Enter عند إدخال الباركود يدوياً',
           ),
         );
       },

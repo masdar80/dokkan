@@ -11,6 +11,9 @@ class CustomersScreen extends StatefulWidget {
 }
 
 class _CustomersScreenState extends State<CustomersScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -23,40 +26,66 @@ class _CustomersScreenState extends State<CustomersScreen> {
       appBar: AppBar(
         title: const Text('الزبائن والذمم'),
       ),
-      body: Consumer<CustomerProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'بحث عن زبون...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (val) => setState(() => _searchQuery = val),
+            ),
+          ),
+          Expanded(
+            child: Consumer<CustomerProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (provider.customers.isEmpty) {
-            return const Center(child: Text('لا يوجد زبائن مضافين حالياً'));
-          }
+                final filtered = provider.customers.where((c) => 
+                  c.name.toLowerCase().contains(_searchQuery.toLowerCase())
+                ).toList();
 
-          return ListView.builder(
-            itemCount: provider.customers.length,
-            padding: const EdgeInsets.all(16),
-            itemBuilder: (context, index) {
-              final customer = provider.customers[index];
-              return Card(
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(customer.phone ?? 'بدون رقم هاتف'),
-                  trailing: const Icon(Icons.chevron_left),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CustomerStatementScreen(customer: customer),
+                if (_searchQuery.isEmpty) {
+                  return const Center(child: Text('ابدأ بالبحث عن زبون...'));
+                }
+
+                if (filtered.isEmpty) {
+                  return const Center(child: Text('لا يوجد نتائج تطابق البحث'));
+                }
+
+                return ListView.builder(
+                  itemCount: filtered.length,
+                  padding: const EdgeInsets.all(16),
+                  itemBuilder: (context, index) {
+                    final customer = filtered[index];
+                    return Card(
+                      child: ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.person)),
+                        title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(customer.phone ?? 'بدون رقم هاتف'),
+                        trailing: const Icon(Icons.chevron_left),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CustomerStatementScreen(customer: customer),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddCustomerDialog(context),

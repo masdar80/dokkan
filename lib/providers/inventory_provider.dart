@@ -114,23 +114,18 @@ class InventoryProvider with ChangeNotifier {
   }
 
   // إدارة المشتريات
-  Future<void> addPurchase({
-    required int productId,
-    required double quantity,
-    required double priceSyp,
+  Future<void> addPurchaseInvoice({
+    required List<Map<String, dynamic>> items,
     required double currentExchangeRate,
+    String? supplierName,
+    String purchaseCurrency = 'SYP',
   }) async {
-    final batch = Batch(
-      productId: productId,
-      initialQuantity: quantity,
-      remainingQuantity: quantity,
-      purchasePriceSyp: priceSyp,
+    await _batchRepo.processPurchaseInvoice(
+      items: items,
       exchangeRate: currentExchangeRate,
-      costUsd: priceSyp / currentExchangeRate,
-      purchaseDate: DateTime.now(),
+      supplierName: supplierName,
+      purchaseCurrency: purchaseCurrency,
     );
-    
-    await _batchRepo.insertBatch(batch);
     await loadProducts();
   }
 
@@ -144,8 +139,8 @@ class InventoryProvider with ChangeNotifier {
   }
   
 
-  Future<bool> deleteBatch(int id) async {
-    final success = await _batchRepo.deleteBatch(id);
+  Future<bool> deletePurchaseInvoice(int id) async {
+    final success = await _batchRepo.deletePurchaseInvoice(id);
     if (success) {
       await loadProducts();
     }

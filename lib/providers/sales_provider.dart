@@ -8,9 +8,8 @@ class SalesProvider with ChangeNotifier {
   bool get isProcessing => _isProcessing;
 
   Future<void> recordSale({
-    required int productId,
-    required double quantity,
-    required double sellPriceSyp,
+    required List<Map<String, dynamic>> items,
+    required double discountSyp,
     required double currentExchangeRate,
     int? customerId,
     String saleType = 'cash',
@@ -21,9 +20,8 @@ class SalesProvider with ChangeNotifier {
     
     try {
       await _saleRepo.processSale(
-        productId: productId,
-        quantity: quantity,
-        sellPriceSyp: sellPriceSyp,
+        items: items,
+        discountSyp: discountSyp,
         currentExchangeRate: currentExchangeRate,
         customerId: customerId,
         saleType: saleType,

@@ -62,21 +62,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // جدول الدفعات (المشتريات)
-    await db.execute('''
-      CREATE TABLE batches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        initial_quantity REAL NOT NULL,
-        remaining_quantity REAL NOT NULL,
-        purchase_price_syp REAL NOT NULL,
-        exchange_rate REAL NOT NULL,
-        cost_usd REAL NOT NULL,
-        purchase_date TEXT NOT NULL,
-        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-      )
-    ''');
-
     // جدول المبيعات
     await db.execute('''
       CREATE TABLE sales (
@@ -88,7 +73,39 @@ class DatabaseHelper {
         exchange_rate REAL NOT NULL,
         sale_type TEXT DEFAULT 'cash',
         sale_currency TEXT DEFAULT 'SYP',
+        discount_amount_syp REAL DEFAULT 0,
+        discount_amount_usd REAL DEFAULT 0,
         FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL
+      )
+    ''');
+
+    // جدول فواتير المشتريات
+    await db.execute('''
+      CREATE TABLE purchases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        supplier_name TEXT,
+        purchase_date TEXT NOT NULL,
+        total_amount_syp REAL NOT NULL,
+        total_amount_usd REAL NOT NULL,
+        exchange_rate REAL NOT NULL,
+        purchase_currency TEXT DEFAULT 'SYP'
+      )
+    ''');
+
+    // جدول الدفعات (مواد المشتريات)
+    await db.execute('''
+      CREATE TABLE batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        purchase_id INTEGER,
+        initial_quantity REAL NOT NULL,
+        remaining_quantity REAL NOT NULL,
+        purchase_price_syp REAL NOT NULL,
+        exchange_rate REAL NOT NULL,
+        cost_usd REAL NOT NULL,
+        purchase_date TEXT NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+        FOREIGN KEY (purchase_id) REFERENCES purchases (id) ON DELETE CASCADE
       )
     ''');
 
@@ -189,6 +206,46 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE sales ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL');
       await db.execute('ALTER TABLE sales ADD COLUMN sale_type TEXT DEFAULT "cash"');
       await db.execute('ALTER TABLE sales ADD COLUMN sale_currency TEXT DEFAULT "SYP"');
+    }
+
+    if (oldVersion < 6) {
+      // 1. إضافة جدول المشتريات
+      await db.execute('''
+        CREATE TABLE purchases (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          supplier_name TEXT,
+          purchase_date TEXT NOT NULL,
+          total_amount_syp REAL NOT NULL,
+          total_amount_usd REAL NOT NULL,
+          exchange_rate REAL NOT NULL,
+          purchase_currency TEXT DEFAULT 'SYP'
+        )
+      ''');
+
+      // 2. إضافة أعمدة لجدول المبيعات
+      await db.execute('ALTER TABLE sales ADD COLUMN discount_amount_syp REAL DEFAULT 0');
+      await db.execute('ALTER TABLE sales ADD COLUMN discount_amount_usd REAL DEFAULT 0');
+
+      // 3. إضافة عمود لجدول الدفعات
+      await db.execute('ALTER TABLE batches ADD COLUMN purchase_id INTEGER REFERENCES purchases(id) ON DELETE CASCADE');
+
+      // 4. ترحيل البيانات القديمة للمشتريات (إن وجد)
+      final batches = await db.query('batches');
+      for (var batch in batches) {
+        if (batch['purchase_id'] == null) {
+          // إنشاء فاتورة شراء لكل دفعة قديمة للحفاظ على البيانات
+          int purchaseId = await db.insert('purchases', {
+            'supplier_name': 'مورد قديم',
+            'purchase_date': batch['purchase_date'],
+            'total_amount_syp': (batch['initial_quantity'] as double) * (batch['purchase_price_syp'] as double),
+            'total_amount_usd': (batch['initial_quantity'] as double) * (batch['cost_usd'] as double),
+            'exchange_rate': batch['exchange_rate'],
+            'purchase_currency': 'SYP'
+          });
+          
+          await db.update('batches', {'purchase_id': purchaseId}, where: 'id = ?', whereArgs: [batch['id']]);
+        }
+      }
     }
   }
 

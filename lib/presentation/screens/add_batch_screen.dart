@@ -14,11 +14,15 @@ class AddBatchScreen extends StatefulWidget {
 }
 
 class _AddBatchScreenState extends State<AddBatchScreen> {
-  final _formKey = GlobalKey<FormState>();
+  // Cart for purchase
+  final List<Map<String, dynamic>> _purchaseItems = [];
+  
   Product? _selectedProduct;
-  final _quantityController = TextEditingController();
+  final _qtyController = TextEditingController(text: '1');
   final _priceControllerSyp = TextEditingController();
   final _priceControllerUsd = TextEditingController();
+  final _supplierController = TextEditingController();
+  
   bool _isUsdMode = false;
 
   @override
@@ -39,101 +43,167 @@ class _AddBatchScreenState extends State<AddBatchScreen> {
     }
   }
 
+  void _addItemToList() {
+    if (_selectedProduct == null) return;
+    final qty = double.tryParse(_qtyController.text) ?? 0;
+    final priceSyp = double.tryParse(_priceControllerSyp.text) ?? 0;
+    
+    if (qty <= 0 || priceSyp <= 0) return;
+
+    setState(() {
+      _purchaseItems.add({
+        'productId': _selectedProduct!.id,
+        'name': _selectedProduct!.name,
+        'quantity': qty,
+        'priceSyp': priceSyp,
+      });
+      _selectedProduct = null;
+      _qtyController.text = '1';
+      _priceControllerSyp.clear();
+      _priceControllerUsd.clear();
+    });
+  }
+
+  double get _totalSyp => _purchaseItems.fold(0, (sum, item) => sum + (item['quantity'] * item['priceSyp']));
+
   @override
   Widget build(BuildContext context) {
+    final rate = context.watch<ExchangeRateProvider>().currentRate;
+    
     return Scaffold(
-      appBar: AppBar(title: const Text('تسجيل مشتريات')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // البحث عن المادة
-              ProductSearchField(
-                selectedProduct: _selectedProduct,
-                onSelected: (p) => setState(() => _selectedProduct = p),
-              ),
-              const SizedBox(height: 16),
-              
-              // الكمية
-              TextFormField(
-                controller: _quantityController,
-                decoration: const InputDecoration(
-                  labelText: 'الكمية المشتراة',
-                  prefixIcon: Icon(Icons.add_shopping_cart),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) => (value == null || value.isEmpty) ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // اختيار عملة الشراء
-              Row(
-                children: [
-                  const Text('عملة الشراء:'),
-                  const SizedBox(width: 16),
-                  ChoiceChip(
-                    label: const Text('ليرة سورية'),
-                    selected: !_isUsdMode,
-                    onSelected: (val) => setState(() => _isUsdMode = !val),
+      appBar: AppBar(title: const Text('تسجيل فاتورة مشتريات')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. اختيار المادة وإدخال السعر والكمية
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    children: [
+                      ProductSearchField(
+                        selectedProduct: _selectedProduct,
+                        onSelected: (p) => setState(() => _selectedProduct = p),
+                      ),
+                      if (_selectedProduct != null) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _qtyController,
+                                decoration: const InputDecoration(labelText: 'الكمية', isDense: true),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _isUsdMode ? _priceControllerUsd : _priceControllerSyp,
+                                decoration: InputDecoration(
+                                  labelText: 'سعر الشراء (${_isUsdMode ? '\$' : 'ل.س'})',
+                                  isDense: true,
+                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (v) => _calculateOtherCurrency(v, _isUsdMode),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(_isUsdMode ? Icons.attach_money : Icons.payments, color: Colors.blue),
+                              onPressed: () => setState(() => _isUsdMode = !_isUsdMode),
+                            ),
+                            ElevatedButton(
+                              onPressed: _addItemToList,
+                              child: const Text('إضافة'),
+                            ),
+                          ],
+                        ),
+                        if (_priceControllerSyp.text.isNotEmpty || _priceControllerUsd.text.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              _isUsdMode ? '≈ ${_priceControllerSyp.text} ل.س' : '≈ ${_priceControllerUsd.text} \$',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('دولار أمريكي'),
-                    selected: _isUsdMode,
-                    onSelected: (val) => setState(() => _isUsdMode = val),
+                ),
+              ),
+            ),
+  
+            // 2. قائمة المواد المضافة للفاتورة
+            Expanded(
+              child: _purchaseItems.isEmpty 
+                ? const Center(child: Text('قائمة المواد فارغة'))
+                : ListView.builder(
+                    itemCount: _purchaseItems.length,
+                    itemBuilder: (context, index) {
+                      final item = _purchaseItems[index];
+                      return ListTile(
+                        title: Text(item['name']),
+                        subtitle: Text('الكمية: ${item['quantity']} × ${item['priceSyp']} ل.س'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('${(item['quantity'] * item['priceSyp']).toStringAsFixed(0)} ل.س'),
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                              onPressed: () => setState(() => _purchaseItems.removeAt(index)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+            ),
+  
+            // 3. ملخص الفاتورة والحفظ
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 5)],
+              ),
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _supplierController,
+                    decoration: const InputDecoration(labelText: 'اسم المورد (اختياري)', prefixIcon: Icon(Icons.business)),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('الإجمالي: ${_totalSyp.toStringAsFixed(0)} ل.س', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text('بالدولار: ${(_totalSyp / (rate > 0 ? rate : 1)).toStringAsFixed(2)} \$', style: const TextStyle(color: Colors.blue)),
+                        ],
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _purchaseItems.isEmpty ? null : () async {
+                          await context.read<InventoryProvider>().addPurchaseInvoice(
+                            items: _purchaseItems,
+                            currentExchangeRate: rate,
+                            supplierName: _supplierController.text.isEmpty ? null : _supplierController.text,
+                          );
+                          if (mounted) Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.save),
+                        label: const Text('حفظ الفاتورة'),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              // حقول السعر
-              TextFormField(
-                controller: _isUsdMode ? _priceControllerUsd : _priceControllerSyp,
-                decoration: InputDecoration(
-                  labelText: _isUsdMode ? 'سعر شراء القطعة (بالدولار)' : 'سعر شراء القطعة (بالليرة)',
-                  prefixIcon: Icon(_isUsdMode ? Icons.attach_money : Icons.payments),
-                  suffixText: _isUsdMode ? '\$' : 'SYP',
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (val) => _calculateOtherCurrency(val, _isUsdMode),
-                validator: (value) => (value == null || value.isEmpty) ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 16),
-              
-              // عرض السعر المقابل
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-                child: Text(
-                  _isUsdMode 
-                      ? 'يعادل تقريباً: ${_priceControllerSyp.text} ل.س'
-                      : 'يعادل تقريباً: ${_priceControllerUsd.text} \$',
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ),
-              
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate() && _selectedProduct != null) {
-                    final rate = context.read<ExchangeRateProvider>().currentRate;
-                    await context.read<InventoryProvider>().addPurchase(
-                      productId: _selectedProduct!.id!,
-                      quantity: double.parse(_quantityController.text),
-                      priceSyp: double.parse(_priceControllerSyp.text),
-                      currentExchangeRate: rate,
-                    );
-                    if (mounted) Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('إضافة للمخزون', style: TextStyle(fontSize: 18)),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -128,102 +128,107 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text(AppStrings.appName),
       ),
       drawer: const AppDrawer(),
-      body: Column(
-        children: [
-          // شريط سعر الصرف الدائم
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.currency_exchange, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text(
-                      'سعر الصرف الحالي:',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Consumer<ExchangeRateProvider>(
-                      builder: (context, provider, _) {
-                        return Text(
-                          '${provider.currentRate} SYP',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _checkExchangeRate,
-                      tooltip: 'تحديث السعر',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // بطاقة ملخص سريعة
-          if (_stats != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Theme.of(context).primaryColor, Colors.blue.shade800],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // شريط سعر الصرف الدائم
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.currency_exchange, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        'سعر الصرف الحالي:',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildQuickStat(
-                      'أرباح اليوم', 
-                      '${_stats!['total_profit_usd']?.toStringAsFixed(1)} \$',
-                      color: (_stats!['total_profit_usd'] ?? 0) >= 0 ? Colors.white : Colors.redAccent,
-                    ),
-                    Container(width: 1, height: 40, color: Colors.white24),
-                    _buildQuickStat('المبيعات', '${(_stats!['total_sales_syp']! / 1000).toStringAsFixed(0)}K'),
-                  ],
-                ),
+                  Row(
+                    children: [
+                      Consumer<ExchangeRateProvider>(
+                        builder: (context, provider, _) {
+                          return Text(
+                            '${provider.currentRate} SYP',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _checkExchangeRate,
+                        tooltip: 'تحديث السعر',
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          
-          // محتوى الصفحة الرئيسي
-          Expanded(
-            child: GridView.count(
-              padding: const EdgeInsets.all(16),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              children: [
-                _buildMenuCard(context, Icons.inventory, AppStrings.inventory, Colors.orange, const InventoryListScreen()),
-                _buildMenuCard(context, Icons.shopping_cart, AppStrings.sales, Colors.green, const POSScreen()),
-                _buildMenuCard(context, Icons.local_shipping, AppStrings.purchases, Colors.blue, const AddBatchScreen()),
-                _buildMenuCard(context, Icons.bar_chart, AppStrings.reports, Colors.purple, const ReportsScreen()),
-              ],
+            
+            // بطاقة ملخص سريعة (إحصائيات اليوم فقط)
+            if (_stats != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Theme.of(context).primaryColor, Colors.blue.shade800],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).primaryColor.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildQuickStat(
+                        'أرباح اليوم', 
+                        '${_stats!['today_profit_usd']?.toStringAsFixed(2)} \$',
+                        color: (_stats!['today_profit_usd'] ?? 0) >= 0 ? Colors.white : Colors.redAccent,
+                      ),
+                      Container(width: 1, height: 40, color: Colors.white24),
+                      _buildQuickStat(
+                        'مبيعات اليوم', 
+                        '${((_stats!['today_sales_syp'] ?? 0) / 1000).toStringAsFixed(1)}K'
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            // محتوى الصفحة الرئيسي
+            Expanded(
+              child: GridView.count(
+                padding: const EdgeInsets.all(16),
+                crossAxisCount: 2,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                children: [
+                  _buildMenuCard(context, Icons.inventory, AppStrings.inventory, Colors.orange, const InventoryListScreen()),
+                  _buildMenuCard(context, Icons.shopping_cart, AppStrings.sales, Colors.green, const POSScreen()),
+                  _buildMenuCard(context, Icons.local_shipping, AppStrings.purchases, Colors.blue, const AddBatchScreen()),
+                  _buildMenuCard(context, Icons.bar_chart, AppStrings.reports, Colors.purple, const ReportsScreen()),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

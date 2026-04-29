@@ -49,14 +49,16 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildFinancialTab(),
-          _buildMovementTab(isSales: true),
-          _buildMovementTab(isSales: false),
-          _buildCustomReportTab(),
-        ],
+      body: SafeArea(
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildFinancialTab(),
+            _buildMovementTab(isSales: true),
+            _buildMovementTab(isSales: false),
+            _buildCustomReportTab(),
+          ],
+        ),
       ),
     );
   }
@@ -189,19 +191,48 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
               return ListView.builder(
                 itemCount: data.length,
                 itemBuilder: (context, index) {
-                  final item = data[index];
-                  return ListTile(
-                    title: Text(item['name']),
-                    subtitle: Text(DateFormat('yyyy-MM-dd').format(DateTime.parse(item[isSales ? 'sale_date' : 'purchase_date']))),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('${isSales ? item['sell_price_syp'] : item['purchase_price_syp']} ل.س'),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                          onPressed: () => _showDeleteTransactionDialog(context, item, isSales),
-                        ),
-                      ],
+                  final invoice = data[index];
+                  final id = isSales ? invoice['sale_id'] : invoice['purchase_id'];
+                  final date = DateTime.parse(isSales ? invoice['sale_date'] : invoice['purchase_date']);
+                  final totalSyp = invoice['total_amount_syp'] ?? 0;
+                  final totalUsd = invoice['total_amount_usd'] ?? 0;
+                  final itemsCount = invoice['items_count'] ?? 0;
+                  final secondaryName = isSales 
+                      ? (invoice['customer_name'] ?? 'زبون عام')
+                      : (invoice['supplier_name'] ?? 'مورد عام');
+                  
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: ListTile(
+                      onTap: () => _showInvoiceDetails(id, isSales, invoice),
+                      title: Text(
+                        '${isSales ? "فاتورة مبيع" : "فاتورة شراء"} #$id', 
+                        style: const TextStyle(fontWeight: FontWeight.bold)
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('$secondaryName | $itemsCount مواد'),
+                          Text(DateFormat('yyyy-MM-dd HH:mm').format(date), style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('${NumberFormat("#,###").format(totalSyp)} ل.س', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text('${totalUsd.toStringAsFixed(2)} \$', style: const TextStyle(color: Colors.blue, fontSize: 12)),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                            onPressed: () => _showDeleteTransactionDialog(context, invoice, isSales),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -210,6 +241,71 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
           ),
         ),
       ],
+    );
+  }
+
+  void _showInvoiceDetails(int id, bool isSales, Map<String, dynamic> invoice) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              'تفاصيل الفاتورة #$id', 
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+            ),
+            const Divider(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: isSales 
+                  ? _reportRepo.getSaleInvoiceItems(id)
+                  : _reportRepo.getPurchaseInvoiceItems(id),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final items = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      final qty = item['quantity'] ?? item['initial_quantity'] ?? 0;
+                      final price = isSales ? item['sell_price_syp'] : item['purchase_price_syp'];
+                      return ListTile(
+                        title: Text(item['product_name'] ?? 'مادة غير معروفة'),
+                        subtitle: Text('الكمية: $qty × $price ل.س'),
+                        trailing: Text('${(qty * price).toStringAsFixed(0)} ل.س'),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const Divider(),
+            if (isSales && (invoice['discount_amount_syp'] ?? 0) > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('الخصم:', style: TextStyle(color: Colors.red)),
+                    Text('-${invoice['discount_amount_syp']} ل.س', style: const TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('الإجمالي النهائي:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text('${NumberFormat("#,###").format(invoice['total_amount_syp'])} ل.س', 
+                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -268,29 +364,30 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
 
   // --- واجهات التفاصيل المتسلسلة (Drill-Down) ---
   void _showDeleteTransactionDialog(BuildContext context, Map<String, dynamic> item, bool isSales) {
+    final id = isSales ? item['sale_id'] : item['purchase_id'];
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isSales ? 'إلغاء عملية بيع' : 'إلغاء عملية شراء'),
+        title: Text(isSales ? 'إلغاء فاتورة مبيع' : 'إلغاء فاتورة شراء'),
         content: Text(isSales 
-            ? 'هل أنت متأكد من إلغاء عملية بيع "${item['name']}"؟ سيتم إرجاع الكمية للمخزون.'
-            : 'هل أنت متأكد من إلغاء عملية شراء "${item['name']}"؟ سيتم خصم الكمية من المخزون.\nملاحظة: لا يمكن الحذف إذا تم بيع جزء من الدفعة.'),
+            ? 'هل أنت متأكد من إلغاء الفاتورة رقم #$id؟ سيتم إرجاع كافة الكميات للمخزون.'
+            : 'هل أنت متأكد من إلغاء الفاتورة رقم #$id؟ سيتم خصم الكميات من المخزون.\nملاحظة: لا يمكن الحذف إذا تم بيع جزء من أي مادة في الفاتورة.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           ElevatedButton(
             onPressed: () async {
               bool success = true;
               if (isSales) {
-                await context.read<SalesProvider>().deleteSale(item['sale_id']);
+                await context.read<SalesProvider>().deleteSale(id);
               } else {
-                success = await context.read<InventoryProvider>().deleteBatch(item['id']);
+                success = await context.read<InventoryProvider>().deletePurchaseInvoice(id);
               }
               
               if (mounted) {
                 Navigator.pop(context);
                 if (!success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تعذر الحذف: تم بيع جزء من هذه الدفعة بالفعل')),
+                    const SnackBar(content: Text('تعذر الحذف: تم بيع جزء من مواد هذه الفاتورة بالفعل')),
                   );
                 }
                 setState(() {}); // تحديث الواجهة
@@ -319,7 +416,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text('تفاصيل الـ $period', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              child: Text('ملخص فواتير $period', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ),
             const Divider(),
             Expanded(
@@ -332,25 +429,21 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
                     itemCount: list.length,
                     itemBuilder: (context, index) {
                       final item = list[index];
-                      // تخصيص العرض حسب نوع التفاصيل
                       if (type == 'daily') {
-                        // تفاصيل اليوم: مبيعات فردية
                         return ListTile(
-                          title: Text(item['name']),
-                          subtitle: Text('الكمية: ${item['quantity']}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          title: Text('فاتورة مبيع #${item['sale_id']}'),
+                          subtitle: Text('الوقت: ${DateFormat('HH:mm').format(DateTime.parse(item['sale_date']))}'),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text('${item['profit_usd'].toStringAsFixed(2)} \$'),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                onPressed: () => _showDeleteTransactionDialog(context, item, true),
-                              ),
+                              Text('${item['total_amount_syp']} ل.س'),
+                              Text('${item['total_profit'].toStringAsFixed(2)} \$', style: const TextStyle(color: Colors.green, fontSize: 12)),
                             ],
                           ),
+                          onTap: () => _showInvoiceDetails(item['sale_id'], true, item),
                         );
                       } else {
-                        // تفاصيل الشهر/السنة: مجاميع فرعية
                         return ListTile(
                           title: Text(item['sub_period'] ?? item['period']),
                           subtitle: Text('المبيعات: ${item['total_syp']} ل.س'),
@@ -373,7 +466,7 @@ class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProvider
     if (type == 'daily') return _reportRepo.getDaySalesDetails(period);
     if (type == 'monthly') return _reportRepo.getCustomRangeReport(
       from: DateTime.parse('$period-01'), 
-      to: DateTime.parse('$period-31'), // SQLite handles out of range dates
+      to: DateTime.parse('$period-31'), 
       groupBy: 'daily'
     );
     return _reportRepo.getCustomRangeReport(
