@@ -52,11 +52,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (formKey.currentState!.validate()) {
-                context.read<InventoryProvider>().addCategory(nameController.text).then((_) {
-                  if (context.mounted) Navigator.pop(context);
-                });
+                final newCat = await context.read<InventoryProvider>().addCategory(nameController.text);
+                if (mounted) {
+                  setState(() => _selectedCategory = newCat);
+                  Navigator.pop(context);
+                }
               }
             },
             child: const Text('حفظ'),

@@ -8,7 +8,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static const String dbName = 'dokkan.db';
-  static const int dbVersion = 2;
+  static const int dbVersion = 7;
   static Database? _database;
 
   DatabaseHelper._init();
@@ -45,11 +45,41 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
+    // جدول الإعدادات
+    await db.execute('''
+      CREATE TABLE app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    // إدخال قيم الإعدادات الافتراضية
+    await db.execute('''
+      INSERT INTO app_settings (key, value)
+      VALUES ('admin_pin_hash', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4')
+    ''');
+    await db.execute('''
+      INSERT INTO app_settings (key, value)
+      VALUES ('pin_is_default', 'true')
+    ''');
+
     // جدول التصنيفات
     await db.execute('''
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL
+      )
+    ''');
+
+    // جدول الموردين
+    await db.execute('''
+      CREATE TABLE vendors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        phone TEXT,
+        address TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL
       )
     ''');
 
@@ -59,6 +89,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL,
         phone TEXT,
+        email TEXT,
+        address TEXT,
         created_at TEXT NOT NULL
       )
     ''');
@@ -73,6 +105,9 @@ class DatabaseHelper {
         category_id INTEGER,
         current_quantity REAL DEFAULT 0,
         default_sell_price_syp REAL DEFAULT 0,
+        unit TEXT DEFAULT 'قطعة',
+        min_stock_level REAL DEFAULT 0,
+        description TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL
       )
@@ -91,6 +126,7 @@ class DatabaseHelper {
         sale_currency TEXT DEFAULT 'SYP',
         discount_amount_syp REAL DEFAULT 0,
         discount_amount_usd REAL DEFAULT 0,
+        notes TEXT,
         FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL
       )
     ''');
@@ -100,11 +136,13 @@ class DatabaseHelper {
       CREATE TABLE purchases (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         supplier_name TEXT,
+        vendor_id INTEGER,
         purchase_date TEXT NOT NULL,
         total_amount_syp REAL NOT NULL,
         total_amount_usd REAL NOT NULL,
         exchange_rate REAL NOT NULL,
-        purchase_currency TEXT DEFAULT 'SYP'
+        purchase_currency TEXT DEFAULT 'SYP',
+        FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE SET NULL
       )
     ''');
 
@@ -152,6 +190,21 @@ class DatabaseHelper {
         payment_date TEXT NOT NULL,
         notes TEXT,
         FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+      )
+    ''');
+
+    // جدول دفعات الموردين
+    await db.execute('''
+      CREATE TABLE vendor_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vendor_id INTEGER NOT NULL,
+        amount_usd REAL NOT NULL,
+        amount_syp REAL NOT NULL,
+        exchange_rate REAL NOT NULL,
+        payment_currency TEXT NOT NULL,
+        payment_date TEXT NOT NULL,
+        notes TEXT,
+        FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
       )
     ''');
 
@@ -262,6 +315,62 @@ class DatabaseHelper {
           await db.update('batches', {'purchase_id': purchaseId}, where: 'id = ?', whereArgs: [batch['id']]);
         }
       }
+    }
+
+    if (oldVersion < 7) {
+      // 1. Create app_settings table
+      await db.execute('''
+        CREATE TABLE app_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+      
+      // Insert default PIN '1234'
+      await db.execute('''
+        INSERT INTO app_settings (key, value) 
+        VALUES ('admin_pin_hash', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4')
+      ''');
+      await db.execute('''
+        INSERT INTO app_settings (key, value) 
+        VALUES ('pin_is_default', 'true')
+      ''');
+
+      // 2. Create vendors table
+      await db.execute('''
+        CREATE TABLE vendors (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          phone TEXT,
+          address TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      // 3. Create vendor_payments table
+      await db.execute('''
+        CREATE TABLE vendor_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          vendor_id INTEGER NOT NULL,
+          amount_usd REAL NOT NULL,
+          amount_syp REAL NOT NULL,
+          exchange_rate REAL NOT NULL,
+          payment_currency TEXT NOT NULL,
+          payment_date TEXT NOT NULL,
+          notes TEXT,
+          FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
+        )
+      ''');
+
+      // 4. Add columns to purchases, products, sales, customers
+      await db.execute('ALTER TABLE purchases ADD COLUMN vendor_id INTEGER REFERENCES vendors(id) ON DELETE SET NULL');
+      await db.execute("ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'قطعة'");
+      await db.execute('ALTER TABLE products ADD COLUMN min_stock_level REAL DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN description TEXT');
+      await db.execute('ALTER TABLE sales ADD COLUMN notes TEXT');
+      await db.execute('ALTER TABLE customers ADD COLUMN email TEXT');
+      await db.execute('ALTER TABLE customers ADD COLUMN address TEXT');
     }
   }
 

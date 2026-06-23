@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dokkan/providers/auth_provider.dart';
 import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/providers/sales_provider.dart';
 import 'package:dokkan/providers/exchange_rate_provider.dart';
@@ -8,6 +9,7 @@ import 'package:dokkan/presentation/widgets/product_search_field.dart';
 import 'package:dokkan/providers/customer_provider.dart';
 import 'package:dokkan/data/models/customer_model.dart';
 import 'package:dokkan/presentation/screens/barcode_scanner_screen.dart';
+import 'package:dokkan/presentation/screens/role_selection_screen.dart';
 import 'package:intl/intl.dart';
 
 class POSScreen extends StatefulWidget {
@@ -115,7 +117,22 @@ class _POSScreenState extends State<POSScreen> {
     final totalUsd = totalSyp / (rate > 0 ? rate : 1);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('نقطة البيع (فاتورة)')),
+      appBar: AppBar(
+        title: const Text('نقطة البيع (فاتورة)'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'تغيير الوضع / تسجيل الخروج',
+            onPressed: () {
+              Provider.of<AuthProvider>(context, listen: false).logout();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [

@@ -1,33 +1,34 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:dokkan/data/datasources/database_helper.dart';
 import 'package:dokkan/data/models/product_model.dart';
 import 'package:dokkan/data/models/category_model.dart';
 import 'package:dokkan/data/repositories/product_repository.dart';
 import 'package:dokkan/data/repositories/category_repository.dart';
-import 'package:dokkan/data/repositories/batch_repository.dart';
-import 'package:dokkan/data/models/batch_model.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart' hide Batch;
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'dart:io' as io;
 
 class DataService {
   final ProductRepository _productRepo = ProductRepository();
   final CategoryRepository _categoryRepo = CategoryRepository();
-  final BatchRepository _batchRepo = BatchRepository();
 
   // --- 1. النسخ الاحتياطي الكامل (قاعدة البيانات) ---
   
   Future<bool> exportFullBackup() async {
     try {
-      final dbPath = await getDatabasesPath();
-      final path = join(dbPath, 'dokkan.db');
-      final file = File(path);
-
-      if (!await file.exists()) return false;
-      final bytes = await file.readAsBytes();
+      Uint8List bytes;
+      if (kIsWeb) {
+        bytes = await databaseFactoryFfiWeb.readDatabaseBytes('dokkan.db');
+      } else {
+        final dbPath = await getDatabasesPath();
+        final path = join(dbPath, 'dokkan.db');
+        final file = io.File(path);
+        if (!await file.exists()) return false;
+        bytes = await file.readAsBytes();
+      }
 
       String? outputFile = await FilePicker.platform.saveFile(
         dialogTitle: 'حفظ النسخة الاحتياطية',
@@ -37,7 +38,7 @@ class DataService {
 
       return outputFile != null;
     } catch (e) {
-      print('Backup error: $e');
+      debugPrint('Backup error: $e');
       return false;
     }
   }
@@ -46,19 +47,27 @@ class DataService {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles();
       if (result != null) {
-        File file = File(result.files.single.path!);
-        final dbPath = await getDatabasesPath();
-        final path = join(dbPath, 'dokkan.db');
+        final bytes = kIsWeb 
+            ? result.files.single.bytes 
+            : await io.File(result.files.single.path!).readAsBytes();
+        
+        if (bytes == null) return false;
 
         // إغلاق قاعدة البيانات قبل الاستبدال
         await DatabaseHelper.instance.close();
-        
-        await file.copy(path);
+
+        if (kIsWeb) {
+          await databaseFactoryFfiWeb.writeDatabaseBytes('dokkan.db', bytes);
+        } else {
+          final dbPath = await getDatabasesPath();
+          final path = join(dbPath, 'dokkan.db');
+          await io.File(path).writeAsBytes(bytes);
+        }
         return true;
       }
       return false;
     } catch (e) {
-      print('Restore error: $e');
+      debugPrint('Restore error: $e');
       return false;
     }
   }
@@ -86,7 +95,7 @@ class DataService {
 
       return outputFile != null;
     } catch (e) {
-      print('JSON Export error: $e');
+      debugPrint('JSON Export error: $e');
       return false;
     }
   }
@@ -96,35 +105,41 @@ class DataService {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
+        withData: true, // مهم جداً للويب والجوال معاً
       );
 
       if (result == null) return false;
 
-      File file = File(result.files.single.path!);
-      String content = await file.readAsString();
+      final bytes = result.files.single.bytes;
+      if (bytes == null) return false;
+      
+      String content = utf8.decode(bytes);
       Map<String, dynamic> data = jsonDecode(content);
 
       // 1. استيراد التصنيفات
-      final List cats = data['categories'];
-      Map<int, int> categoryIdMap = {}; // خرائط لربط المعرفات القديمة بالجديدة
+      final List cats = (data['categories'] as List?) ?? [];
+      Map<int, int> categoryIdMap = {}; 
 
-      for (var catMap in cats) {
-        int oldId = catMap['id'];
-        // التحقق إذا كان التصنيف موجوداً بنفس الاسم
+      for (var item in cats) {
+        final catMap = item as Map<String, dynamic>;
+        int oldId = catMap['id'] as int;
+        String catName = catMap['name'] as String;
+
         final existingCats = await _categoryRepo.getAllCategories();
-        final existing = existingCats.where((c) => c.name == catMap['name']);
+        final existing = existingCats.where((c) => c.name == catName);
         
         if (existing.isNotEmpty) {
           categoryIdMap[oldId] = existing.first.id!;
         } else {
-          int newId = await _categoryRepo.insertCategory(Category(name: catMap['name']));
+          int newId = await _categoryRepo.insertCategory(Category(name: catName));
           categoryIdMap[oldId] = newId;
         }
       }
 
       // 2. استيراد المواد
-      final List prods = data['products'];
-      for (var prodMap in prods) {
+      final List prods = (data['products'] as List?) ?? [];
+      for (var item in prods) {
+        final prodMap = item as Map<String, dynamic>;
         final product = Product.fromMap(prodMap);
         int? newCatId = product.categoryId != null ? categoryIdMap[product.categoryId] : null;
 
@@ -147,7 +162,7 @@ class DataService {
       }
       return true;
     } catch (e) {
-      print('JSON Import error: $e');
+      debugPrint('JSON Import error: $e');
       return false;
     }
   }

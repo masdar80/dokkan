@@ -4,7 +4,7 @@ class AppStrings {
   
   // Database constants
   static const String dbName = 'dokkan.db';
-  static const int dbVersion = 6;
+  static const int dbVersion = 7;
 
   // Translation keys (Simplified for now)
   static const String inventory = 'المخزون';

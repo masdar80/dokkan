@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dokkan/core/constants/app_strings.dart';
 import 'package:dokkan/core/theme/app_theme.dart';
+import 'package:dokkan/providers/auth_provider.dart';
 import 'package:dokkan/providers/exchange_rate_provider.dart';
 import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/providers/sales_provider.dart';
 import 'package:dokkan/providers/customer_provider.dart';
-import 'package:dokkan/presentation/screens/home_screen.dart';
+import 'package:dokkan/presentation/screens/setup_pin_screen.dart';
+import 'package:dokkan/presentation/screens/role_selection_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ExchangeRateProvider()),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => SalesProvider()),
@@ -39,7 +42,19 @@ class DokkanApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const HomeScreen(),
+      home: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (!auth.isInitialized) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (auth.pinIsDefault) {
+            return const SetupPinScreen();
+          }
+          return const RoleSelectionScreen();
+        },
+      ),
     );
   }
 }

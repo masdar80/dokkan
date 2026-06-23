@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:dokkan/core/utils/data_service.dart';
 import 'package:provider/provider.dart';
+import 'package:dokkan/providers/auth_provider.dart';
 import 'package:dokkan/providers/inventory_provider.dart';
 import 'package:dokkan/presentation/screens/customers_screen.dart';
+import 'package:dokkan/presentation/screens/role_selection_screen.dart';
+import 'package:dokkan/presentation/screens/settings_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -38,6 +41,17 @@ class AppDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const CustomersScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('الإعدادات العامة'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
           ),
@@ -91,6 +105,19 @@ class AppDrawer extends StatelessWidget {
                   const SnackBar(content: Text('تم الاستيراد بنجاح')),
                 );
               }
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('تسجيل الخروج / تغيير الوضع', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            onTap: () {
+              Navigator.pop(context);
+              Provider.of<AuthProvider>(context, listen: false).logout();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+              );
             },
           ),
           const Spacer(),

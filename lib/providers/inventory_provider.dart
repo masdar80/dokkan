@@ -98,9 +98,10 @@ class InventoryProvider with ChangeNotifier {
   }
 
   // إدارة التصنيفات
-  Future<void> addCategory(String name) async {
-    await _categoryRepo.insertCategory(Category(name: name));
+  Future<Category> addCategory(String name) async {
+    final id = await _categoryRepo.insertCategory(Category(name: name));
     await loadCategories();
+    return Category(id: id, name: name);
   }
 
   Future<void> updateCategory(Category category) async {
