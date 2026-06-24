@@ -1,7 +1,8 @@
 class AppStrings {
-  static const String appName = 'تموينات شحادة';
-  static const String exchangeRateUrl = 'https://sp-today.com/en/currency/us-dollar';
-  
+  static const String appName = 'تطبيق دكّان';
+  static const String exchangeRateUrl =
+      'https://sp-today.com/en/currency/us-dollar';
+
   // Database constants
   static const String dbName = 'dokkan.db';
   static const int dbVersion = 7;
